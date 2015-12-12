@@ -15,6 +15,7 @@ char buffer[512];
 bool isExit = false;
 string names[10];
 void *connection_handler(void *);
+void parse_command(char *textInput, int socket);
 
 int main(){
 	int client, server;
@@ -61,7 +62,6 @@ int main(){
 
 	while(client = accept(server, (struct sockaddr*)&client_addr, &size)){
 		cout << "Connected with client..." << endl;
-
 		if( pthread_create( &thread_id , NULL ,  connection_handler , (void*) &client) < 0)
         {
             cout << "Couldn't create thread" << endl;
@@ -143,6 +143,7 @@ void *connection_handler(void *socket_desc)
 
     memset(buffer, 0, bufsize);
 	strcpy(buffer, "Connected...\n");
+	strcpy(buffer, "For info about this server type /INFO\n");
 	send(sock, buffer, bufsize, 0);
 	memset(buffer, 0, bufsize);
 
@@ -153,6 +154,8 @@ void *connection_handler(void *socket_desc)
 		if (*buffer == '#'){
 			*buffer = '*';
 			isExit = true;
+		}else if (*buffer == '/'){
+			parse_command(buffer, sock);
 		}else{
 			memset(buffer, 0, bufsize);
 		}
@@ -165,3 +168,28 @@ void *connection_handler(void *socket_desc)
 
     return 0;
 } 
+
+
+void parse_command(char *textInput, int socket){
+	char textBuffer[512];
+	char textParsing[512];
+	char msgString[512];
+	memset(textBuffer, 0, bufsize);
+	strcpy(textBuffer, textInput);
+
+	strcpy(msgString, "Hola, esto es una prueba en el cliente\n");
+
+	int i;
+	if (textInput == NULL)
+		return;
+
+	strcpy(textParsing, strtok(textBuffer, "\r\n"));
+	/*for (i=0; i<strlen(textParsing);i++){
+		cout << (int)textParsing[i] << endl;
+	}*/
+	if (strcmp(textParsing,"/INFO")==0){
+		send(socket, msgString, strlen(msgString), 0);
+		cout << "hola esto es una prueba" << endl;
+	}
+
+}
