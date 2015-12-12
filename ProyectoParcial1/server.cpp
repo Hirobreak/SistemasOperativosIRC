@@ -7,13 +7,21 @@
 #include<stdlib.h>
 #include<unistd.h>
 #include<string>
+#include<algorithm>
 
 using namespace std;
+
+struct usuario {
+  string nombre;
+  int whispering;
+  int channel;
+} ;
 
 int bufsize = 512;
 char buffer[512];
 bool isExit = false;
 string names[10];
+usuario usuarios[25];
 void *connection_handler(void *);
 void parse_command(char *textInput, int socket);
 
@@ -140,6 +148,9 @@ void *connection_handler(void *socket_desc)
 {
     //Get the socket descriptor
     int sock = *(int*)socket_desc;
+    char * word;
+    //char mensaje[512];
+    string nombre;
 
     memset(buffer, 0, bufsize);
 	strcpy(buffer, "Connected...\n");
@@ -149,7 +160,26 @@ void *connection_handler(void *socket_desc)
 
 	do {
 		recv(sock, buffer, bufsize, 0);
-		cout << names[sock] << ": ";
+
+		//strcpy(mensaje, buffer);
+		char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
+		strcpy(mensaje, buffer);
+		word = strtok(mensaje, " \r");
+
+		if(!strcmp(word, "NICK")){
+			word = strtok(NULL, " \r");
+			cout << usuarios[sock].nombre << " Changing Name To " << word << endl;
+			usuarios[sock].nombre = string(word);
+			//usuarios[sock].nombre.erase(remove(usuarios[sock].nombre.begin(), usuarios[sock].nombre.end(), '\n'), usuarios[sock].nombre.end());
+		}
+
+		free(mensaje);
+
+		if (usuarios[sock].nombre.empty()){
+			cout << "Anonimo " << sock << ": ";
+		}else{
+			cout << usuarios[sock].nombre << ": ";
+		}
 		cout << buffer << "";
 		if (*buffer == '#'){
 			*buffer = '*';
@@ -159,13 +189,23 @@ void *connection_handler(void *socket_desc)
 		}else{
 			memset(buffer, 0, bufsize);
 		}
+		
 	} while (*buffer != '*');
     
+
+
+    //CLOSING CONNECTION
+	if (usuarios[sock].nombre.empty()){
+		cout << "Anonimo " << sock << " left the room..." << endl;
+	}else{
+		cout << usuarios[sock].nombre << " left the room..." << endl;
+	}
+
 	memset(buffer, 0, bufsize);
-	strcpy(buffer, "Disconnected...\n");
+	strcpy(buffer, "Disconnected... :(\n");
 	send(sock, buffer, bufsize, 0);
 	memset(buffer, 0, bufsize);
-
+	close(sock);
     return 0;
 } 
 
