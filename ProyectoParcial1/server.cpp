@@ -149,7 +149,7 @@ void *connection_handler(void *socket_desc)
     //Get the socket descriptor
     int sock = *(int*)socket_desc;
     char * word;
-    char mensaje[512];
+    //char mensaje[512];
     string nombre;
 
     memset(buffer, 0, bufsize);
@@ -160,6 +160,8 @@ void *connection_handler(void *socket_desc)
 	do {
 		recv(sock, buffer, bufsize, 0);
 
+		//strcpy(mensaje, buffer);
+		char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
 		strcpy(mensaje, buffer);
 		word = strtok(mensaje, " \r");
 
@@ -169,6 +171,8 @@ void *connection_handler(void *socket_desc)
 			usuarios[sock].nombre = string(word);
 			//usuarios[sock].nombre.erase(remove(usuarios[sock].nombre.begin(), usuarios[sock].nombre.end(), '\n'), usuarios[sock].nombre.end());
 		}
+
+		free(mensaje);
 
 		if (usuarios[sock].nombre.empty()){
 			cout << "Anonimo " << sock << ": ";
