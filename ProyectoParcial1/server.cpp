@@ -8,6 +8,8 @@
 #include<unistd.h>
 #include<string>
 #include<algorithm>
+#include<time.h>
+#include<cassert>
 
 using namespace std;
 
@@ -22,8 +24,14 @@ char buffer[512];
 bool isExit = false;
 string names[10];
 usuario usuarios[25];
+time_t start = time(0);
+char builtTime[32];
+char startTime[32];
 void *connection_handler(void *);
 void parse_command(char *textInput, int socket);
+void show_info(int socket);
+void builtDateTime();
+void startDateTime();
 
 int main(){
 	int client, server;
@@ -49,7 +57,8 @@ int main(){
 		cout << "Error trying to connect..." << endl;
 		exit(1);
 	}
-
+	builtDateTime();
+	startDateTime();
 	cout << "Server Socket Created" << endl;
 
 	server_addr.sin_family = AF_INET;
@@ -62,7 +71,6 @@ int main(){
 	}
 
 	size = sizeof(server_addr);
-
 
 	cout << "Listening for clients" << endl;
 	listen(server, 3);
@@ -213,11 +221,8 @@ void *connection_handler(void *socket_desc)
 void parse_command(char *textInput, int socket){
 	char textBuffer[512];
 	char textParsing[512];
-	char msgString[512];
 	memset(textBuffer, 0, bufsize);
 	strcpy(textBuffer, textInput);
-
-	strcpy(msgString, "Hola, esto es una prueba en el cliente\n");
 
 	int i;
 	if (textInput == NULL)
@@ -228,8 +233,38 @@ void parse_command(char *textInput, int socket){
 		cout << (int)textParsing[i] << endl;
 	}*/
 	if (strcmp(textParsing,"/INFO")==0){
-		send(socket, msgString, strlen(msgString), 0);
-		cout << "hola esto es una prueba" << endl;
+		show_info(socket);
 	}
 
+}
+
+void show_info(int socket){
+	char textMessage[512];
+	string msgString;
+	memset(textMessage, 0, bufsize);
+
+	strcpy(textMessage, "Server info:\nServer version: 1.0\nServer compiled: ");
+	strcat(textMessage, builtTime);
+	strcat(textMessage, "\nServer started: ");
+	strcat(textMessage, startTime);
+	strcat(textMessage, "\nOther commands: /JOIN /LIST /MOTD /NAMES /NICK /PART /PRIVMSG /QUIT /SETNAME /TIME /USER /USERS /VERSION\n");
+	send(socket, textMessage, strlen(textMessage), 0);
+}
+
+void builtDateTime() {
+	static const char *built = __DATE__" "__TIME__; 
+    struct tm t;
+  	const char *ret = strptime(built, "%b %d %Y %H:%M:%S", &t);
+  	assert(ret);
+    char buf[80];
+    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &t);
+    strcpy(builtTime, buf);
+}
+
+void startDateTime() {
+    struct tm tstruct;
+    char buf[80];
+    tstruct = *localtime(&start);
+    strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
+    strcpy(startTime, buf);
 }
