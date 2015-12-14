@@ -40,6 +40,10 @@ void show_info(int socket);
 void builtDateTime();
 void startDateTime();
 void change_nickname(int socket);
+void send_privmsg(int socket);
+template <typename T,unsigned S>
+inline unsigned arraysize(const T (&v)[S]) { return S; }
+int search_nickname(char *name);
 
 int main(){
 	int client, server;
@@ -189,6 +193,8 @@ void parse_command(char *textInput, int socket){
 		show_info(socket);
 	}else if(strcmp(strtok(textContent, " "), "/NICK") == 0){
 		change_nickname(socket);
+	}else if(strcmp(strtok(textContent, " "), "/PRIVMSG") == 0){
+		send_privmsg(socket);
 	}
 
 }
@@ -226,12 +232,12 @@ void startDateTime() {
 
 void change_nickname(int socket){
 	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
-	char * word;
+	char* word;
 	strcpy(mensaje, buffer);
 	cout << "que hay en el buffer " << buffer << endl;
 	word = strtok(mensaje, " \r");
 	word = strtok(NULL, " \r");
-	if (sizeof(word)>0){
+	if (sizeof(word)>0){//FALTA VERIFICAR SI YA SE ESTA USANDO EL NICK
 		cout << usuarios[socket].nombre << " Changing Name To " << word << endl;
 		usuarios[socket].nombre = string(word);
 	}else{
@@ -272,3 +278,52 @@ void *server_handler(void *server_desc){
 	}
     return 0;
 } 
+
+void send_privmsg(int socket){
+	int iter, dest;
+	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
+	char* word;
+	char* msgContent;
+	char textMessage[512];
+	string msgString;
+	memset(textMessage, 0, bufsize);
+	
+	strcpy(mensaje, buffer);
+	word = strtok(mensaje, " \r");
+	word = strtok(NULL, " \r");
+	if (sizeof(word)>0){ //FALTA VERIFICAR SI EXISTE DESTINATARIO
+		dest = search_nickname(word);
+		if (dest>0){
+			msgContent = strtok(NULL, "\n");
+			if (sizeof(msgContent)>0){
+				strcpy(textMessage, usuarios[socket].nombre.c_str());
+				strcat(textMessage, "(PRIVATE): ");
+				strcat(textMessage, msgContent);
+				strcat(textMessage, "\n");
+				send(dest, textMessage, strlen(textMessage), 0);
+			}else{
+				strcpy(textMessage, "SERVER: No message to be sent\n");
+				send(socket, textMessage, strlen(textMessage), 0);
+			}
+		}else{
+			strcpy(textMessage, "SERVER: The nickname ");
+			strcat(textMessage, word);
+			strcat(textMessage, " doesn't exist\n");
+			send(socket, textMessage, strlen(textMessage), 0);
+		}
+	}else{
+		strcpy(textMessage, "SERVER: You must insert a nickname\n");
+		send(socket, textMessage, strlen(textMessage), 0);
+	}
+}
+
+int search_nickname(char *name){
+	int iter;
+	for (iter=0; iter < arraysize(usuarios); iter++){
+		if (strcmp(usuarios[iter].nombre.c_str(), name)==0){
+			return iter;
+		}
+	}
+	return -1;
+}
+
