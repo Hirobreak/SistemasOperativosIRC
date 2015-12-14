@@ -32,6 +32,7 @@ void parse_command(char *textInput, int socket);
 void show_info(int socket);
 void builtDateTime();
 void startDateTime();
+void change_nickname(int socket);
 
 int main(){
 	int client, server;
@@ -156,7 +157,7 @@ void *connection_handler(void *socket_desc)
 {
     //Get the socket descriptor
     int sock = *(int*)socket_desc;
-    char * word;
+    
     //char mensaje[512];
     string nombre;
 
@@ -170,19 +171,6 @@ void *connection_handler(void *socket_desc)
 		recv(sock, buffer, bufsize, 0);
 
 		//strcpy(mensaje, buffer);
-		char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
-		strcpy(mensaje, buffer);
-		word = strtok(mensaje, " \r");
-
-		if(!strcmp(word, "NICK")){
-			word = strtok(NULL, " \r");
-			cout << usuarios[sock].nombre << " Changing Name To " << word << endl;
-			usuarios[sock].nombre = string(word);
-			//usuarios[sock].nombre.erase(remove(usuarios[sock].nombre.begin(), usuarios[sock].nombre.end(), '\n'), usuarios[sock].nombre.end());
-		}
-
-		free(mensaje);
-
 		if (usuarios[sock].nombre.empty()){
 			cout << "Anonimo " << sock << ": ";
 		}else{
@@ -221,19 +209,19 @@ void *connection_handler(void *socket_desc)
 void parse_command(char *textInput, int socket){
 	char textBuffer[512];
 	char textParsing[512];
+	char *textContent;
 	memset(textBuffer, 0, bufsize);
 	strcpy(textBuffer, textInput);
 
 	int i;
 	if (textInput == NULL)
 		return;
-
-	strcpy(textParsing, strtok(textBuffer, "\r\n"));
-	/*for (i=0; i<strlen(textParsing);i++){
-		cout << (int)textParsing[i] << endl;
-	}*/
+	textContent = strtok(textBuffer, "\r\n");
+	strcpy(textParsing, textContent);
 	if (strcmp(textParsing,"/INFO")==0){
 		show_info(socket);
+	}else if(strcmp(strtok(textContent, " "), "/NICK") == 0){
+		change_nickname(socket);
 	}
 
 }
@@ -267,4 +255,19 @@ void startDateTime() {
     tstruct = *localtime(&start);
     strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
     strcpy(startTime, buf);
+}
+
+void change_nickname(int socket){
+	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
+	char * word;
+	strcpy(mensaje, buffer);
+	word = strtok(mensaje, " \r");
+	word = strtok(NULL, " \r");
+	if (sizeof(word)>0){
+		cout << usuarios[socket].nombre << " Changing Name To " << word << endl;
+		usuarios[socket].nombre = string(word);
+	}else{
+		cout << "Name not changed \n" << endl;
+	}
+	free(mensaje);
 }
