@@ -33,12 +33,15 @@ usuario usuarios[25];
 time_t start = time(0);
 char builtTime[32];
 char startTime[32];
+char localTime[32];
 void *connection_handler(void *);
 void *server_handler(void *socket_desc);
 void parse_command(char *textInput, int socket);
 void show_info(int socket);
+void show_time(int socket);
 void builtDateTime();
 void startDateTime();
+void localDateTime();
 void change_nickname(int socket);
 void send_privmsg(int socket);
 template <typename T,unsigned S>
@@ -195,6 +198,8 @@ void parse_command(char *textInput, int socket){
 		change_nickname(socket);
 	}else if(strcmp(strtok(textContent, " "), "/PRIVMSG") == 0){
 		send_privmsg(socket);
+	}else if(strcmp(textParsing,"/TIME") == 0){
+		show_time(socket);
 	}
 
 }
@@ -204,7 +209,7 @@ void show_info(int socket){
 	string msgString;
 	memset(textMessage, 0, bufsize);
 
-	strcpy(textMessage, "Server info:\nServer version: 1.0\nServer compiled: ");
+	strcpy(textMessage, "\t\t\tSERVER INFO\nServer version: 1.0\nServer compiled: ");
 	strcat(textMessage, builtTime);
 	strcat(textMessage, "\nServer started: ");
 	strcat(textMessage, startTime);
@@ -212,6 +217,26 @@ void show_info(int socket){
 	send(socket, textMessage, strlen(textMessage), 0);
 }
 
+void show_time(int socket){
+	char textMessage[512];
+	string msgString;
+	memset(textMessage, 0, bufsize);
+	localDateTime();
+
+	strcat(textMessage, "Server local time: ");
+	strcat(textMessage, localTime);
+	strcat(textMessage, "\n");
+	send(socket, textMessage, strlen(textMessage), 0);
+}
+
+void localDateTime(){
+	time_t local = time(0);
+	struct  tm actual;
+	char buff[80];
+	actual = *localtime(&local);
+	strftime(buff, sizeof(buff), "%Y-%m-%d.%X", &actual);
+    strcpy(localTime, buff);
+}
 void builtDateTime() {
 	static const char *built = __DATE__" "__TIME__; 
     struct tm t;
