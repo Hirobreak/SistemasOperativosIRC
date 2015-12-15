@@ -162,8 +162,6 @@ void *connection_handler(void *socket_desc)
 			if (*buffer == '#'){
 				*buffer = '*';
 				isExit = true;
-			}else if (*buffer == '/'){
-				parse_command(buffer, sock);
 			}else{
 				//memset(buffer, 0, bufsize);
 			}
@@ -355,19 +353,23 @@ void *server_handler(void *server_desc){
 
 		if(sender > 0){
 			cout << "por aqui ando" << endl;
-			for( int i = 0; i < 25; i++){
-				memset(mensaje_server, 0, msize);
-				if(usuarios[sender].nombre.empty()){
-					strcat(mensaje_server, "Anonimo");
-				}else{
-					strcat(mensaje_server, usuarios[sender].nombre.c_str());
-				}
-				strcat(mensaje_server, ": ");
-				strcat(mensaje_server, buffer);
+			if(*buffer == '/'){
+				parse_command(buffer, sender);
+			}else{
+				for( int i = 0; i < 25; i++){
+					memset(mensaje_server, 0, msize);
+					if(usuarios[sender].nombre.empty()){
+						strcat(mensaje_server, "Anonimo");
+					}else{
+						strcat(mensaje_server, usuarios[sender].nombre.c_str());
+					}
+					strcat(mensaje_server, ": ");
+					strcat(mensaje_server, buffer);
 
-				if(i != sender && !usuarios[i].nombre.empty()){
+					if(i != sender && !usuarios[i].nombre.empty()){
 					//strcpy(mensaje_server, "Habla Flaco!!! ");
-					send(i, mensaje_server, msize, 0);
+						send(i, mensaje_server, msize, 0);
+					}
 				}
 			}
 			cout << "liberar locks" << endl;
