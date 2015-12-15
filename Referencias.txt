@@ -9,3 +9,5 @@ Threads: http://www.bogotobogo.com/cplusplus/C11/7_C11_Thread_Sharing_Memory.php
 Mutex: http://www.thegeekstuff.com/2012/05/c-mutex-examples/
 
 Socket Asincrono: https://beej.us/guide/bgnet/output/html/multipage/fcntlman.html
+
+Password: http://www.cplusplus.com/forum/general/3570/

@@ -13,6 +13,7 @@
 #include<pthread.h>
 #include<sys/fcntl.h>
 
+
 using namespace std;
 
 struct usuario {
@@ -20,6 +21,13 @@ struct usuario {
   int whispering;
   int channel;
 } ;
+
+struct channel{
+	int num_usuarios_canal;
+	string nombre_canal;
+//	string password_canal;
+	usuario *usuarios_canal;
+};
 
 pthread_mutex_t buff, full, empty;
 int sender = -1;
@@ -30,6 +38,7 @@ char mensaje_server[1024];
 bool isExit = false;
 string names[10];
 usuario usuarios[25];
+channel canales[25];
 time_t start = time(0);
 char builtTime[32];
 char startTime[32];
@@ -39,6 +48,7 @@ void *server_handler(void *socket_desc);
 void parse_command(char *textInput, int socket);
 void show_info(int socket);
 void show_time(int socket);
+void join_channel(int socket);
 void builtDateTime();
 void startDateTime();
 void localDateTime();
@@ -47,10 +57,11 @@ void send_privmsg(int socket);
 template <typename T,unsigned S>
 inline unsigned arraysize(const T (&v)[S]) { return S; }
 int search_nickname(char *name);
+int search_channel(char *channel_name);
 
 int main(){
 	int client, server;
-	int portNum = 9000;
+	int portNum = 9090;
 
 	names[0]="Pedro";
 	names[1]="Roberto";
@@ -200,9 +211,74 @@ void parse_command(char *textInput, int socket){
 		send_privmsg(socket);
 	}else if(strcmp(textParsing,"/TIME") == 0){
 		show_time(socket);
+	}else if(strcmp(strtok(textContent, " "), "/JOIN") == 0){
+		join_channel(socket);
 	}
 
 }
+
+
+void join_channel(int socket){
+	int chan;
+	char *mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
+	char textMessage[512];
+	char *entrada;
+	string pass = "";
+	strcpy(mensaje, buffer);
+	entrada = strtok(mensaje, " \r");
+	entrada = strtok(NULL, " \r");
+	if(sizeof(entrada)>0){
+		chan = search_channel(entrada);
+		if(chan > 0){//si existe el canal
+			channel can1 = canales[chan];
+			/**if(strcmp(can1.password_canal, "") != 0){//requiere contraseña
+				cout<< "Enter the password: ";
+				char contrasena = cin.get();
+				while(contrasena != 32){ //32 es codigo ASCII del Espacio
+					pass.push_back(contrasena);
+					cout << '*';
+					contrasena=cin.get();
+				}
+				if(pass == can1.password_canal){
+					can1.usuarios_canal[can1.num_usuarios_canal] = usuarios[socket];
+					can1.num_usuarios_canal++;
+					cout<< "SERVER: Connected to channel\n";
+					strcpy(textMessage, "SERVER: Connected to channel\n");
+					send(chan, textMessage, strlen(textMessage),0);
+				}else{
+					cout<< "SERVER: Incorrect password\n";
+					strcpy(textMessage, "SERVER: Incorrect password\n");
+					send(socket, textMessage, strlen(textMessage), 0);
+				}
+			}*/
+			can1.usuarios_canal = &usuarios[socket];
+			can1.num_usuarios_canal++;
+			cout<< "SERVER: Connected to channel\n";
+			strcpy(textMessage, "SERVER: Connected to channel\n");
+			send(chan, textMessage, strlen(textMessage),0);
+			
+		}else{//si no existe el canal
+			channel canal;
+			canal.nombre_canal = entrada;
+			canal.num_usuarios_canal = 0;
+			canal.usuarios_canal = &usuarios[socket];
+			canales[socket]= canal; 
+			canal.num_usuarios_canal++;
+			cout<< "SERVER: The channel has been created\n";
+			if(canal.num_usuarios_canal>0){
+				cout<< "Agregueeee\n";
+			}else{
+				cout<< "no hay nadie\n";
+			}
+			
+			strcpy(textMessage, "SERVER: The channel has been created\n");
+			send(chan, textMessage, strlen(textMessage),0);
+
+		}
+	}
+	
+}
+
 
 void show_info(int socket){
 	char textMessage[512];
@@ -352,3 +428,12 @@ int search_nickname(char *name){
 	return -1;
 }
 
+int search_channel(char *channel_name){
+	int indice;
+	for (indice=0; indice < arraysize(usuarios); indice++){
+		if (strcmp(canales[indice].nombre_canal.c_str(), channel_name)==0){
+			return indice;
+		}
+	}
+	return -1;
+}
