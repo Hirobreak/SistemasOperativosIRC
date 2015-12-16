@@ -75,7 +75,7 @@ int search_member(channel ,char *);
 
 int main(){
 	int client, server;
-	int portNum = 9001;
+	int portNum = 9000;
 
 	struct sockaddr_in server_addr, client_addr;
 	socklen_t size;
@@ -160,12 +160,6 @@ void *connection_handler(void *socket_desc)
 				cout << usuarios[sock].nombre << ": ";
 			}
 			cout << buffer << "";
-			if (*buffer == '#'){
-				*buffer = '*';
-				isExit = true;
-			}else{
-				//memset(buffer, 0, bufsize);
-			}
 		}
 		pthread_mutex_unlock(&buff);
 		pthread_mutex_unlock(&full);
@@ -192,12 +186,6 @@ void *connection_handler(void *socket_desc)
 				cout << usuarios[sock].nombre << ": ";
 			}
 			cout << buffer << "";
-			if (*buffer == '#'){
-				*buffer = '*';
-				isExit = true;
-			}else{
-				//memset(buffer, 0, bufsize);
-			}
 		}
 		pthread_mutex_unlock(&buff);
 		pthread_mutex_unlock(&full);
@@ -237,9 +225,7 @@ void parse_command(char *textInput, int socket){
 	strcpy(textParsing, textContent);
 
 	if(usuarios[socket].user.empty() || usuarios[socket].realname.empty()){
-		cout << "Ya sabe como es uno 2" << endl;
 		if (strcmp(strtok(textContent, " "),"/USER")==0){
-			cout << "Ya sabe como es uno 3" << endl;
 			set_user(socket);
 		}else{
 			send(socket, "Please set your user and real name\n", strlen("Please set your user and real name\n"), 0);
@@ -342,11 +328,7 @@ void join_channel(int socket){
 					canales[chan].usuarios_canal[canales[chan].num_usuarios_canal] = usuarios[socket];
 					usuarios[socket].member = canales[chan].id_canal;
 					if(canales[chan].num_usuarios_canal>0){
-						cout<< "Agregueeee\n";
 						cout<< canales[chan].num_usuarios_canal << "\n";
-
-					}else{
-						cout<< "no hay nadie\n";
 					}
 					strcpy(textMessage, "SERVER: Connected to channel\n");
 					send(socket, textMessage, strlen(textMessage),0);
@@ -356,19 +338,14 @@ void join_channel(int socket){
 				cout << "canal creado\n";
 				canales[id_actual].nombre_canal = entrada;
 				canales[id_actual].num_usuarios_canal = 0;
-				cout << "asignando memoria a la lista de usuarios\n";
 				canales[id_actual].usuarios_canal[0] = usuarios[socket];
 				//Cada que se crea se asigna en la posicion 0
-				cout << "Se ingresa el canal a la lista total de canales\n";
 				canales[id_actual].id_canal=id_actual;
 				usuarios[socket].member = id_actual;
 				canales[id_actual].num_usuarios_canal++;
 				
 				if(canales[id_actual].num_usuarios_canal>0){
-					cout<< "Agregueeee\n";
 					cout<< canales[id_actual].num_usuarios_canal << "\n";
-				}else{
-					cout<< "no hay nadie\n";
 				}
 				
 				strcpy(textMessage, "SERVER: The channel has been created\n");
@@ -464,9 +441,9 @@ void change_nickname(int socket){
 	if (sizeof(word)>0){
 		for (i=0; i<arraysize(usuarios); i++){
 			if (strcmp(word, usuarios[i].nombre.c_str())==0){
-				strcpy(textMessage, "SERVER: El nickname ");
+				strcpy(textMessage, "SERVER: The nickname ");
 				strcat(textMessage, word);
-				strcat(textMessage, " ya existe.\n");
+				strcat(textMessage, " already exist.\n");
 				send(socket, textMessage, sizeof(textMessage),0);
 				taken=1;
 			}
@@ -490,7 +467,6 @@ void change_realname(int socket){
 	int taken = 0;
 	memset(textMessage, 0, bufsize);
 	
-	cout << "que hay en el buffer " << buffer << endl;
 	word = strtok(mensaje, " \r");
 	if(word != NULL){
 		word = strtok(NULL, " \r");
@@ -503,9 +479,9 @@ void change_realname(int socket){
 	if (sizeof(word)>0){
 		for (i=0; i<arraysize(usuarios); i++){
 			if (strcmp(word, usuarios[i].realname.c_str())==0 && i!=socket){
-				strcpy(textMessage, "SERVER: El nombre real ");
+				strcpy(textMessage, "SERVER: The real name ");
 				strcat(textMessage, word);
-				strcat(textMessage, " ya existe.\n");
+				strcat(textMessage, " already exist.\n");
 				send(socket, textMessage, sizeof(textMessage),0);
 				taken=1;
 			}
@@ -524,7 +500,7 @@ void show_users(int socket){
 	char textMessage[1024];
 	int i;
 	memset(textMessage, 0, 2*bufsize);
-	strcpy(textMessage, "SERVER: Lista de usuarios\n");
+	strcpy(textMessage, "SERVER: Users list\n");
 	strcat(textMessage, "User\tRealN\tNick\tChannel\n");
 	for (i=0; i<arraysize(usuarios); i++){
 		if(!usuarios[i].user.empty() && !usuarios[i].realname.empty()){
@@ -558,7 +534,6 @@ void set_user(int socket){
 	int taken = 0;
 	memset(textMessage, 0, bufsize);
 	
-	cout << "que hay en el buffer " << buffer << endl;
 	word = strtok(mensaje, " \r");
 	if(word != NULL){
 		word = strtok(NULL, " \r");
