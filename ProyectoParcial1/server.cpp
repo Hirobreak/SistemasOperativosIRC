@@ -31,7 +31,6 @@ struct channel{
 
 pthread_mutex_t buff, full, empty;
 int sender = -1;
-int indice_general = 0;
 int bufsize = 512;
 char buffer[512];
 int msize = 1024;
@@ -225,19 +224,31 @@ void part_channel(int socket){
 	int indice=-1;
 	char *word;
 	if(usuarios[socket].member != 1){//Si el usuario no esta en ningun canal
+
 		strcpy(textMessage, "SERVER: You are not member of a channel\n");
 		send(socket, textMessage, strlen(textMessage),0);
+
 	}else{
+
 		int pos = 0;
+		cout << "Resetea la asignacion de miembro al usuario\n";
 		usuarios[socket].member = 0;
 		strcpy(word,usuarios[socket].nombre.c_str());
-		do{
+		cout << "setea el nombre en una variable char * y es: " << word << "\n" ;
+		while(indice == -1){
+			cout << "Busca el indice del chateador\n";
 			indice = search_member(canales[pos],word);
+			cout << "Encontroooo y es:" << indice << "\n";
 			pos++;
-		}while(indice == -1);
+			cout << "Ya aumento su posicion\n";
+		};
+
+		cout << "Obteniendo el canal\n";
 		channel canal_deseado = canales[pos-1];//Obtengo el canal que contiene al usuario
+		
 		delete &canal_deseado.usuarios_canal[indice];//Elimino el puntero
-		canal_deseado.num_usuarios_canal = canal_deseado.num_usuarios_canal-1;//Disminuyo la cantidad de usuarios
+		cout << "Eliminando al usuario del canal\n";
+		canal_deseado.num_usuarios_canal--;//Disminuyo la cantidad de usuarios
 		cout<< canal_deseado.num_usuarios_canal << "\n";
 		if(canal_deseado.num_usuarios_canal == 0){//Si ya no hay usuarios en el canal
 			delete &canales[pos-1];//Elimino el puntero y el canal deja de existir
@@ -265,33 +276,13 @@ void join_channel(int socket){
 			chan = search_channel(entrada);//Me devuelve el indice para obtener el elemento desde el arreglo
 			if(chan > 0){//si existe el canal
 				channel can1 = canales[chan];
-				if(can1.num_usuarios_canal > 30){
-					/**if(strcmp(can1.password_canal, "") != 0){//requiere contraseña
-						cout<< "Enter the password: ";
-						char contrasena = cin.get();
-						while(contrasena != 32){ //32 es codigo ASCII del Espacio
-							pass.push_back(contrasena);
-							cout << '*';
-							contrasena=cin.get();
-						}
-						if(pass == can1.password_canal){
-							can1.usuarios_canal[can1.num_usuarios_canal] = usuarios[socket];
-							can1.num_usuarios_canal++;
-							cout<< "SERVER: Connected to channel\n";
-							strcpy(textMessage, "SERVER: Connected to channel\n");
-							send(chan, textMessage, strlen(textMessage),0);
-						}else{
-							cout<< "SERVER: Incorrect password\n";
-							strcpy(textMessage, "SERVER: Incorrect password\n");
-							send(socket, textMessage, strlen(textMessage), 0);
-						}
-					}*/
+				if(can1.num_usuarios_canal > 30){//Si esta lleno
 					strcpy(textMessage, "SERVER: The channel is full\n");
 					send(socket, textMessage, strlen(textMessage),0);
-				}else{
+				}else{//Si aun tiene espacio
 					can1.usuarios_canal[can1.num_usuarios_canal] = usuarios[socket];
 					usuarios[socket].member = 1;
-					can1.num_usuarios_canal=can1.num_usuarios_canal+1;
+					can1.num_usuarios_canal++;
 					if(can1.num_usuarios_canal>0){
 						cout<< "Agregueeee\n";
 						cout<< can1.num_usuarios_canal << "\n";
@@ -312,10 +303,9 @@ void join_channel(int socket){
 				//Cada que se crea se asigna en la posicion 0
 				canal.usuarios_canal[canal.num_usuarios_canal] = usuarios[socket];
 				cout << "Se ingresa el canal a la lista total de canales\n";
-				canales[indice_general]= canal;//Crea el canal
-				indice_general++; 
+				canales[socket]= canal;//Crea el canal
 				usuarios[socket].member = 1;
-				canal.num_usuarios_canal=canal.num_usuarios_canal+1;
+				canal.num_usuarios_canal++;
 				
 				if(canal.num_usuarios_canal>0){
 					cout<< "Agregueeee\n";
