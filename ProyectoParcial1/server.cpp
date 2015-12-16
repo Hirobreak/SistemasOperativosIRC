@@ -64,6 +64,7 @@ void show_version(int socket);
 void end_session(int socket);
 void show_names(int socket);
 void set_user(int socket);
+void show_list(int socket);
 template <typename T,unsigned S>
 inline unsigned arraysize(const T (&v)[S]) { return S; }
 int search_nickname(char *name);
@@ -72,7 +73,7 @@ int search_member(channel ,char *);
 
 int main(){
 	int client, server;
-	int portNum = 9000;
+	int portNum = 9001;
 
 	struct sockaddr_in server_addr, client_addr;
 	socklen_t size;
@@ -264,6 +265,8 @@ void parse_command(char *textInput, int socket){
 		end_session(socket);
 	}else if(strcmp(strtok(textContent, " "),"/NAMES") == 0){
 		show_names(socket);
+	}else if(strcmp(textParsing, "/LIST") == 0){
+		show_list(socket);
 	}
 
 }
@@ -570,12 +573,11 @@ void *server_handler(void *server_desc){
 } 
 
 void send_privmsg(int socket){
-	int iter, dest;
+	int dest;
 	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
 	char* word;
 	char* msgContent;
 	char textMessage[512];
-	string msgString;
 	memset(textMessage, 0, bufsize);
 	
 	strcpy(mensaje, buffer);
@@ -619,13 +621,7 @@ int search_nickname(char *name){
 
 int search_channel(char *channel_name){
 	int indice;
-	char* j = (char*)calloc(strlen(buffer)+1, sizeof(char));
-	strcpy(j, buffer);
 	for (indice=0; indice < arraysize(canales); indice++){
-		cout << "DENTRO DEL SEARCH CHANNEL" << endl;
-		cout << canales[indice].nombre_canal.c_str() << endl;
-		cout << channel_name << endl;
-		cout << strcmp(canales[indice].nombre_canal.c_str(), channel_name) << endl;
 		if (strcmp(canales[indice].nombre_canal.c_str(), channel_name)==0){
 			return indice;
 		}
@@ -648,14 +644,11 @@ void show_names(int socket){
 	int indice, nombIter, counter;
 	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
 	char* word;
-	char* nombresCanales;
 	char textMessage[512];
-	string msgString;
 	memset(textMessage, 0, bufsize);
 	strcpy(textMessage, "SERVER: Channels list:\n");
 	strcpy(mensaje, buffer);
 	counter = 0;
-	cout << "VIENDO ESTO " << endl;
 	word = strtok(mensaje, " \r\n,.-");
 	word = strtok(NULL, " \r\n,.-");
 	while (word != NULL){
@@ -691,6 +684,22 @@ void show_names(int socket){
 			}
 		}
 	}
-	cout << "VIENDO AQUELLO " << endl;
 	send(socket, textMessage, sizeof(textMessage),0);
 }
+
+void show_list(int socket){
+	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
+	int indice;
+	char textMessage[512];
+	memset(textMessage, 0, bufsize);
+	strcpy(textMessage, "SERVER: Channels:\n");
+	strcpy(mensaje, buffer);
+	for(indice = 0; indice < arraysize(canales); indice++){
+		if(!canales[indice].nombre_canal.empty()){
+			strcat(textMessage, "Channel: #");
+			strcat(textMessage, canales[indice].nombre_canal.c_str());
+			strcat(textMessage, "\n");
+		}
+	}
+	send(socket, textMessage, sizeof(textMessage),0);
+}	
