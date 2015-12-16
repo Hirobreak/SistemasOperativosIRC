@@ -20,6 +20,7 @@ struct usuario {
   string nombre;
   int whispering;
   int member;
+  int status;
 } ;
 
 struct channel{
@@ -32,14 +33,12 @@ struct channel{
 
 pthread_mutex_t buff, full, empty;
 int sender = -1;
-int indice_general = 0;
 int bufsize = 512;
 char buffer[512];
 int msize = 1024;
 int id_actual = 0;
 char mensaje_server[1024];
 bool isExit = false;
-string names[10];
 usuario usuarios[25];
 channel canales[25];
 time_t start = time(0);
@@ -58,6 +57,9 @@ void startDateTime();
 void localDateTime();
 void change_nickname(int socket);
 void send_privmsg(int socket);
+void show_motd(int socket);
+void show_version(int socket);
+void end_session(int socket);
 template <typename T,unsigned S>
 inline unsigned arraysize(const T (&v)[S]) { return S; }
 int search_nickname(char *name);
@@ -67,17 +69,6 @@ int search_member(channel ,char *);
 int main(){
 	int client, server;
 	int portNum = 9000;
-
-	names[0]="Pedro";
-	names[1]="Roberto";
-	names[2]="Ray";
-	names[3]="Bronza";
-	names[4]="Omnilasher";
-	names[5]="Skyline";
-	names[6]="Hirobreak";
-	names[7]="Pikachu";
-	names[8]="Ayame";
-	names[9]="Hiroshi";
 
 	struct sockaddr_in server_addr, client_addr;
 	socklen_t size;
@@ -137,13 +128,11 @@ void *connection_handler(void *socket_desc)
     //char mensaje[512];
     string nombre;
 
-    //memset(buffer, 0, bufsize);
-	strcpy(buffer, "Logged into Lobby\n");
-	strcat(buffer, "For info about this server type /INFO\n");
-	send(sock, buffer, bufsize, 0);
-	//memset(buffer, 0, bufsize);
+	send(sock, "Connected...\n", strlen("Connected...\n"), 0);
+	send(sock, "For info about this server type /INFO\n", strlen("For info about this server type /INFO\n"), 0);
+	usuarios[sock].status = 1;
 
-	do {
+	while (usuarios[sock].status == 1){
 		pthread_mutex_lock(&empty);//SECCION CRITICA
 		pthread_mutex_lock(&buff);
 		memset(buffer, 0, bufsize);
@@ -156,7 +145,6 @@ void *connection_handler(void *socket_desc)
 		}
 
 		if(length >= 1){
-			cout << "Im here " << sock << endl;
 			//strcpy(mensaje, buffer);
 			if (usuarios[sock].nombre.empty()){
 				cout << "Anonimo " << sock << ": ";
@@ -174,7 +162,7 @@ void *connection_handler(void *socket_desc)
 		pthread_mutex_unlock(&buff);
 		pthread_mutex_unlock(&full);
 		
-	} while (*buffer != '*');
+	}
     
 
 
@@ -185,10 +173,7 @@ void *connection_handler(void *socket_desc)
 		cout << usuarios[sock].nombre << " left the room..." << endl;
 	}
 
-	memset(buffer, 0, bufsize);
-	strcpy(buffer, "Disconnected... :(\n");
-	send(sock, buffer, bufsize, 0);
-	memset(buffer, 0, bufsize);
+	send(sock, "Disconnected... :(\n", strlen("Disconnected... :(\n"), 0);
 	close(sock);
     return 0;
 } 
@@ -218,6 +203,12 @@ void parse_command(char *textInput, int socket){
 		join_channel(socket);
 	}else if(strcmp(textParsing,"/PART") == 0){
 		part_channel(socket);
+	}else if(strcmp(textParsing,"/MOTD") == 0){
+		show_motd(socket);
+	}else if(strcmp(textParsing,"/VERSION") == 0){
+		show_version(socket);
+	}else if(strcmp(textParsing,"/QUIT") == 0){
+		end_session(socket);
 	}
 
 }
@@ -227,19 +218,31 @@ void part_channel(int socket){
 	int indice=-1;
 	char *word;
 	if(usuarios[socket].member != 1){//Si el usuario no esta en ningun canal
+
 		strcpy(textMessage, "SERVER: You are not member of a channel\n");
 		send(socket, textMessage, strlen(textMessage),0);
+
 	}else{
+
 		int pos = 0;
+		cout << "Resetea la asignacion de miembro al usuario\n";
 		usuarios[socket].member = 0;
 		strcpy(word,usuarios[socket].nombre.c_str());
-		do{
+		cout << "setea el nombre en una variable char * y es: " << word << "\n" ;
+		while(indice == -1){
+			cout << "Busca el indice del chateador\n";
 			indice = search_member(canales[pos],word);
+			cout << "Encontroooo y es:" << indice << "\n";
 			pos++;
-		}while(indice == -1);
+			cout << "Ya aumento su posicion\n";
+		};
+
+		cout << "Obteniendo el canal\n";
 		channel canal_deseado = canales[pos-1];//Obtengo el canal que contiene al usuario
+		
 		delete &canal_deseado.usuarios_canal[indice];//Elimino el puntero
-		canal_deseado.num_usuarios_canal = canal_deseado.num_usuarios_canal-1;//Disminuyo la cantidad de usuarios
+		cout << "Eliminando al usuario del canal\n";
+		canal_deseado.num_usuarios_canal--;//Disminuyo la cantidad de usuarios
 		cout<< canal_deseado.num_usuarios_canal << "\n";
 		if(canal_deseado.num_usuarios_canal == 0){//Si ya no hay usuarios en el canal
 			delete &canales[pos-1];//Elimino el puntero y el canal deja de existir
@@ -267,30 +270,10 @@ void join_channel(int socket){
 			chan = search_channel(entrada);//Me devuelve el indice para obtener el elemento desde el arreglo
 			if(chan > 0){//si existe el canal
 				channel can1 = canales[chan];
-				if(can1.num_usuarios_canal > 30){
-					/**if(strcmp(can1.password_canal, "") != 0){//requiere contraseña
-						cout<< "Enter the password: ";
-						char contrasena = cin.get();
-						while(contrasena != 32){ //32 es codigo ASCII del Espacio
-							pass.push_back(contrasena);
-							cout << '*';
-							contrasena=cin.get();
-						}
-						if(pass == can1.password_canal){
-							can1.usuarios_canal[can1.num_usuarios_canal] = usuarios[socket];
-							can1.num_usuarios_canal++;
-							cout<< "SERVER: Connected to channel\n";
-							strcpy(textMessage, "SERVER: Connected to channel\n");
-							send(chan, textMessage, strlen(textMessage),0);
-						}else{
-							cout<< "SERVER: Incorrect password\n";
-							strcpy(textMessage, "SERVER: Incorrect password\n");
-							send(socket, textMessage, strlen(textMessage), 0);
-						}
-					}*/
+				if(can1.num_usuarios_canal > 30){//Si esta lleno
 					strcpy(textMessage, "SERVER: The channel is full\n");
 					send(socket, textMessage, strlen(textMessage),0);
-				}else{
+				}else{//Si aun tiene espacio
 					can1.usuarios_canal[can1.num_usuarios_canal] = usuarios[socket];
 					usuarios[socket].member = can1.id_canal;
 					can1.num_usuarios_canal=can1.num_usuarios_canal+1;
@@ -316,10 +299,8 @@ void join_channel(int socket){
 				cout << "Se ingresa el canal a la lista total de canales\n";
 				id_actual++;
 				canal.id_canal=id_actual;
-				canales[indice_general]= canal;//Crea el canal
-				indice_general++; 
 				usuarios[socket].member = canal.id_canal;
-				canal.num_usuarios_canal=canal.num_usuarios_canal+1;
+				canal.num_usuarios_canal++;
 				
 				if(canal.num_usuarios_canal>0){
 					cout<< "Agregueeee\n";
@@ -335,6 +316,25 @@ void join_channel(int socket){
 	}
 }
 
+void end_session(int socket){
+	usuarios[socket].status = -1;
+}
+
+void show_motd(int socket){
+	char textMessage[512];
+	string msgString;
+	memset(textMessage, 0, bufsize);
+	strcpy(textMessage, "\tRemember OS is at the top 5 of the most important signatures of computer science! Have a nice day :)\n");
+	send(socket, textMessage, strlen(textMessage), 0);
+}
+
+void show_version(int socket){
+	char textMessage[512];
+	string msgString;
+	memset(textMessage, 0, bufsize);
+	strcpy(textMessage, "\tCurrent Server Version: 1.0\n");
+	send(socket, textMessage, strlen(textMessage), 0);
+}
 
 void show_info(int socket){
 	char textMessage[512];
@@ -426,7 +426,6 @@ void *server_handler(void *server_desc){
 		pthread_mutex_lock(&buff);
 
 		if(sender > 0){
-			cout << "por aqui ando" << endl;
 			if(*buffer == '/'){
 				parse_command(buffer, sender);
 			}else{
@@ -440,7 +439,7 @@ void *server_handler(void *server_desc){
 					strcat(mensaje_server, ": ");
 					strcat(mensaje_server, buffer);
 
-					if(i != sender && !usuarios[i].nombre.empty() && usuarios[i].member==usuarios[sender].member){
+					if(i != sender && usuarios[i].status == 1 && usuarios[i].member==usuarios[sender].member){
 					//strcpy(mensaje_server, "Habla Flaco!!! ");
 						send(i, mensaje_server, msize, 0);
 					}
