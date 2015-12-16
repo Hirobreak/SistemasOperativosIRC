@@ -1,0 +1,16 @@
+.TH EspolIRC 8 "16 Diciembre 2015" "1.0" "EspolIRC Man Page"
+.SH NOMBRE
+server \- Levanta un servidor de chat sobre la direccion IP del computador en el puerto 9090
+.SH SYNOPSIS
+server
+.SH DESCRIPCIÓN
+EspolIRC es un servidor que implementa IRC, un protocolo de comunicación por medio de texto en tiempo real. Por medio de EspolIRC podremos conectarnos desde un cliente (telnet) e
+ingresar a multiples canales o boards de comunicación en los cuales podremos intercambiar mensajes con todos los usuarios de dicho canal. También podremos intercambiar mensajes privados con otros usuarios.
+.SH OPCIONES
+No utiliza opciones adicionales
+.SH BUGS
+Un bug del lado del cliente en el que al escribir mientras se reciben mensajes, el texto que llega se sobrepone a la linea de comando, sin embargo el mensaje que se envía no incluye estas lineas de mensajes recibidos.
+.SH AUTHOR
+Pedro Iñiguez,
+Ray Montiel,
+Roberto Yoncon
