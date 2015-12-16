@@ -23,6 +23,7 @@ struct usuario {
 } ;
 
 struct channel{
+	int id_canal;
 	int num_usuarios_canal;
 	string nombre_canal;
 //	string password_canal;
@@ -64,7 +65,7 @@ int search_member(channel ,char *);
 
 int main(){
 	int client, server;
-	int portNum = 9090;
+	int portNum = 9000;
 
 	names[0]="Pedro";
 	names[1]="Roberto";
@@ -136,8 +137,8 @@ void *connection_handler(void *socket_desc)
     string nombre;
 
     //memset(buffer, 0, bufsize);
-	strcpy(buffer, "Connected...\n");
-	strcpy(buffer, "For info about this server type /INFO\n");
+	strcpy(buffer, "Logged into Lobby\n");
+	strcat(buffer, "For info about this server type /INFO\n");
 	send(sock, buffer, bufsize, 0);
 	//memset(buffer, 0, bufsize);
 
@@ -257,7 +258,7 @@ void join_channel(int socket){
 	strcpy(mensaje, buffer);
 	entrada = strtok(mensaje, " \r");
 	entrada = strtok(NULL, " \r");
-	if(usuarios[socket].member == 1){
+	if(usuarios[socket].member > 0){
 		strcpy(textMessage, "SERVER: You are already in a channel\n");
 		send(socket, textMessage, strlen(textMessage),0);
 	}else{
@@ -290,7 +291,7 @@ void join_channel(int socket){
 					send(socket, textMessage, strlen(textMessage),0);
 				}else{
 					can1.usuarios_canal[can1.num_usuarios_canal] = usuarios[socket];
-					usuarios[socket].member = 1;
+					usuarios[socket].member = can1.id_canal;
 					can1.num_usuarios_canal=can1.num_usuarios_canal+1;
 					if(can1.num_usuarios_canal>0){
 						cout<< "Agregueeee\n";
@@ -312,6 +313,11 @@ void join_channel(int socket){
 				//Cada que se crea se asigna en la posicion 0
 				canal.usuarios_canal[canal.num_usuarios_canal] = usuarios[socket];
 				cout << "Se ingresa el canal a la lista total de canales\n";
+				if (arraysize(canales)){
+					canal.id_canal=1;
+				}else{
+					canal.id_canal=arraysize(canales) + 1;
+				}
 				canales[indice_general]= canal;//Crea el canal
 				indice_general++; 
 				usuarios[socket].member = 1;
@@ -320,7 +326,6 @@ void join_channel(int socket){
 				if(canal.num_usuarios_canal>0){
 					cout<< "Agregueeee\n";
 					cout<< canal.num_usuarios_canal << "\n";
-
 				}else{
 					cout<< "no hay nadie\n";
 				}
@@ -421,7 +426,7 @@ void *server_handler(void *server_desc){
 					strcat(mensaje_server, ": ");
 					strcat(mensaje_server, buffer);
 
-					if(i != sender && !usuarios[i].nombre.empty()){
+					if(i != sender && !usuarios[i].nombre.empty() && usuarios[i].member==usuarios[sender].member){
 					//strcpy(mensaje_server, "Habla Flaco!!! ");
 						send(i, mensaje_server, msize, 0);
 					}
