@@ -64,6 +64,8 @@ void show_version(int socket);
 void end_session(int socket);
 void show_names(int socket);
 void set_user(int socket);
+void change_realname(int socket);
+void show_users(int socket);
 template <typename T,unsigned S>
 inline unsigned arraysize(const T (&v)[S]) { return S; }
 int search_nickname(char *name);
@@ -248,6 +250,8 @@ void parse_command(char *textInput, int socket){
 		show_info(socket);
 	}else if(strcmp(strtok(textContent, " "), "/NICK") == 0){
 		change_nickname(socket);
+	}else if(strcmp(strtok(textContent, " "), "/SETNAME") == 0){
+		change_realname(socket);
 	}else if(strcmp(strtok(textContent, " "), "/PRIVMSG") == 0){
 		send_privmsg(socket);
 	}else if(strcmp(textParsing,"/TIME") == 0){
@@ -264,6 +268,8 @@ void parse_command(char *textInput, int socket){
 		end_session(socket);
 	}else if(strcmp(strtok(textContent, " "),"/NAMES") == 0){
 		show_names(socket);
+	}else if(strcmp(textParsing,"/USERS") == 0){
+		show_users(socket);
 	}
 
 }
@@ -470,6 +476,74 @@ void change_nickname(int socket){
 		cout << "Name not changed \n" << endl;
 	}
 	free(mensaje);
+}
+
+void change_realname(int socket){
+	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
+	char* word;
+	strcpy(mensaje, buffer);
+	char textMessage[512];
+	int i;
+	int taken = 0;
+	memset(textMessage, 0, bufsize);
+	
+	cout << "que hay en el buffer " << buffer << endl;
+	word = strtok(mensaje, " \r");
+	if(word != NULL){
+		word = strtok(NULL, " \r");
+	}else{
+		return;
+	}
+	if(word == NULL){
+		return;
+	}
+	if (sizeof(word)>0){
+		for (i=0; i<arraysize(usuarios); i++){
+			if (strcmp(word, usuarios[i].realname.c_str())==0 && i!=socket){
+				strcpy(textMessage, "SERVER: El nombre real ");
+				strcat(textMessage, word);
+				strcat(textMessage, " ya existe.\n");
+				send(socket, textMessage, sizeof(textMessage),0);
+				taken=1;
+			}
+		}
+		if(!taken){
+			cout << usuarios[socket].nombre << " Changing RealName To " << word << endl;
+			usuarios[socket].realname = string(word);
+		}
+	}else{
+		cout << "RealName not changed \n" << endl;
+	}
+	free(mensaje);
+}
+
+void show_users(int socket){
+	char textMessage[1024];
+	int i;
+	memset(textMessage, 0, 2*bufsize);
+	strcpy(textMessage, "SERVER: Lista de usuarios\n");
+	strcat(textMessage, "User\tRealN\tNick\tChannel\n");
+	for (i=0; i<arraysize(usuarios); i++){
+		if(!usuarios[i].user.empty() && !usuarios[i].realname.empty()){
+			strcat(textMessage, usuarios[i].user.c_str());
+			strcat(textMessage, "\t");
+			strcat(textMessage, usuarios[i].realname.c_str());
+			strcat(textMessage, "\t");
+			if(usuarios[i].nombre.empty()){
+				strcat(textMessage, "Anonimo");
+			}else{
+				strcat(textMessage, usuarios[i].nombre.c_str());
+			}
+			strcat(textMessage, "\t");
+			if(usuarios[i].member == 0){
+				strcat(textMessage, "Global");
+			}else{
+				strcat(textMessage, canales[usuarios[i].member].nombre_canal.c_str());
+			}
+			strcat(textMessage, "\n");
+		}
+	}
+	send(socket, textMessage, sizeof(textMessage),0);
 }
 
 void set_user(int socket){
