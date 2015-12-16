@@ -36,6 +36,7 @@ int indice_general = 0;
 int bufsize = 512;
 char buffer[512];
 int msize = 1024;
+int id_actual = 0;
 char mensaje_server[1024];
 bool isExit = false;
 string names[10];
@@ -313,14 +314,11 @@ void join_channel(int socket){
 				//Cada que se crea se asigna en la posicion 0
 				canal.usuarios_canal[canal.num_usuarios_canal] = usuarios[socket];
 				cout << "Se ingresa el canal a la lista total de canales\n";
-				if (arraysize(canales)){
-					canal.id_canal=1;
-				}else{
-					canal.id_canal=arraysize(canales) + 1;
-				}
+				id_actual++;
+				canal.id_canal=id_actual;
 				canales[indice_general]= canal;//Crea el canal
 				indice_general++; 
-				usuarios[socket].member = 1;
+				usuarios[socket].member = canal.id_canal;
 				canal.num_usuarios_canal=canal.num_usuarios_canal+1;
 				
 				if(canal.num_usuarios_canal>0){
@@ -393,12 +391,28 @@ void change_nickname(int socket){
 	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
 	char* word;
 	strcpy(mensaje, buffer);
+	char textMessage[512];
+	int i;
+	int taken = 0;
+	memset(textMessage, 0, bufsize);
+	
 	cout << "que hay en el buffer " << buffer << endl;
 	word = strtok(mensaje, " \r");
 	word = strtok(NULL, " \r");
 	if (sizeof(word)>0){//FALTA VERIFICAR SI YA SE ESTA USANDO EL NICK
-		cout << usuarios[socket].nombre << " Changing Name To " << word << endl;
-		usuarios[socket].nombre = string(word);
+		for (i=0; i<arraysize(usuarios); i++){
+			if (strcmp(word, usuarios[i].nombre.c_str())==0){
+				strcpy(textMessage, "SERVER: El nickname ");
+				strcat(textMessage, word);
+				strcat(textMessage, " ya existe.\n");
+				send(socket, textMessage, sizeof(textMessage),0);
+				taken=1;
+			}
+		}
+		if(!taken){
+			cout << usuarios[socket].nombre << " Changing Name To " << word << endl;
+			usuarios[socket].nombre = string(word);
+		}
 	}else{
 		cout << "Name not changed \n" << endl;
 	}
