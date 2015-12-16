@@ -28,7 +28,7 @@ struct channel{
 	int num_usuarios_canal;
 	string nombre_canal;
 //	string password_canal;
-	usuario *usuarios_canal;
+	usuario usuarios_canal[25];
 };
 
 pthread_mutex_t buff, full, empty;
@@ -60,6 +60,7 @@ void send_privmsg(int socket);
 void show_motd(int socket);
 void show_version(int socket);
 void end_session(int socket);
+void show_names(int socket);
 template <typename T,unsigned S>
 inline unsigned arraysize(const T (&v)[S]) { return S; }
 int search_nickname(char *name);
@@ -209,6 +210,8 @@ void parse_command(char *textInput, int socket){
 		show_version(socket);
 	}else if(strcmp(textParsing,"/QUIT") == 0){
 		end_session(socket);
+	}else if(strcmp(strtok(textContent, " "),"/NAMES") == 0){
+		show_names(socket);
 	}
 
 }
@@ -216,8 +219,8 @@ void parse_command(char *textInput, int socket){
 void part_channel(int socket){
 	char textMessage[512];
 	int indice=-1;
-	char *word;
-	if(usuarios[socket].member != 1){//Si el usuario no esta en ningun canal
+	char word[512];
+	if(usuarios[socket].member == 0){//Si el usuario no esta en ningun canal
 
 		strcpy(textMessage, "SERVER: You are not member of a channel\n");
 		send(socket, textMessage, strlen(textMessage),0);
@@ -227,10 +230,10 @@ void part_channel(int socket){
 		int pos = 0;
 		cout << "Resetea la asignacion de miembro al usuario\n";
 		usuarios[socket].member = 0;
-		strcpy(word,usuarios[socket].nombre.c_str());
+		strcpy(word ,usuarios[socket].nombre.c_str());
 		cout << "setea el nombre en una variable char * y es: " << word << "\n" ;
 		while(indice == -1){
-			cout << "Busca el indice del chateador\n";
+			cout << "Busca el indice del chateador\n";//SE CAE AQUI
 			indice = search_member(canales[pos],word);
 			cout << "Encontroooo y es:" << indice << "\n";
 			pos++;
@@ -240,13 +243,13 @@ void part_channel(int socket){
 		cout << "Obteniendo el canal\n";
 		channel canal_deseado = canales[pos-1];//Obtengo el canal que contiene al usuario
 		
-		delete &canal_deseado.usuarios_canal[indice];//Elimino el puntero
+		canal_deseado.usuarios_canal[indice];//seteo en 0
 		cout << "Eliminando al usuario del canal\n";
 		canal_deseado.num_usuarios_canal--;//Disminuyo la cantidad de usuarios
 		cout<< canal_deseado.num_usuarios_canal << "\n";
-		if(canal_deseado.num_usuarios_canal == 0){//Si ya no hay usuarios en el canal
+		/*if(canal_deseado.num_usuarios_canal == 0){//Si ya no hay usuarios en el canal
 			delete &canales[pos-1];//Elimino el puntero y el canal deja de existir
-		}
+		}*/
 		strcpy(textMessage, "SERVER: You has left the channel\n");
 		send(socket, textMessage, strlen(textMessage),0);
 	}
@@ -266,45 +269,43 @@ void join_channel(int socket){
 		strcpy(textMessage, "SERVER: You are already in a channel\n");
 		send(socket, textMessage, strlen(textMessage),0);
 	}else{
+		cout << entrada << search_channel(entrada) << "PROBANDO SI EXISTE  " << endl;
 		if(sizeof(entrada)>0){
 			chan = search_channel(entrada);//Me devuelve el indice para obtener el elemento desde el arreglo
 			if(chan > 0){//si existe el canal
-				channel can1 = canales[chan];
-				if(can1.num_usuarios_canal > 30){//Si esta lleno
+				if(canales[chan].num_usuarios_canal > 24){//Si esta lleno
 					strcpy(textMessage, "SERVER: The channel is full\n");
 					send(socket, textMessage, strlen(textMessage),0);
 				}else{//Si aun tiene espacio
-					can1.usuarios_canal[can1.num_usuarios_canal] = usuarios[socket];
-					usuarios[socket].member = can1.id_canal;
-					can1.num_usuarios_canal=can1.num_usuarios_canal+1;
-					if(can1.num_usuarios_canal>0){
+					canales[chan].num_usuarios_canal++;
+					canales[chan].usuarios_canal[canales[chan].num_usuarios_canal] = usuarios[socket];
+					usuarios[socket].member = canales[chan].id_canal;
+					if(canales[chan].num_usuarios_canal>0){
 						cout<< "Agregueeee\n";
-						cout<< can1.num_usuarios_canal << "\n";
+						cout<< canales[chan].num_usuarios_canal << "\n";
 
 					}else{
 						cout<< "no hay nadie\n";
 					}
 					strcpy(textMessage, "SERVER: Connected to channel\n");
-					send(chan, textMessage, strlen(textMessage),0);
+					send(socket, textMessage, strlen(textMessage),0);
 				}	
 			}else{//si no existe el canal
-				channel canal;
-				cout << "canal creado\n";
-				canal.nombre_canal = entrada;
-				canal.num_usuarios_canal = 0;
-				cout << "asignando memoria a la lista de usuarios\n";
-				canal.usuarios_canal = new usuario[30];
-				//Cada que se crea se asigna en la posicion 0
-				canal.usuarios_canal[canal.num_usuarios_canal] = usuarios[socket];
-				cout << "Se ingresa el canal a la lista total de canales\n";
 				id_actual++;
-				canal.id_canal=id_actual;
-				usuarios[socket].member = canal.id_canal;
-				canal.num_usuarios_canal++;
+				cout << "canal creado\n";
+				canales[id_actual].nombre_canal = entrada;
+				canales[id_actual].num_usuarios_canal = 0;
+				cout << "asignando memoria a la lista de usuarios\n";
+				canales[id_actual].usuarios_canal[0] = usuarios[socket];
+				//Cada que se crea se asigna en la posicion 0
+				cout << "Se ingresa el canal a la lista total de canales\n";
+				canales[id_actual].id_canal=id_actual;
+				usuarios[socket].member = id_actual;
+				canales[id_actual].num_usuarios_canal++;
 				
-				if(canal.num_usuarios_canal>0){
+				if(canales[id_actual].num_usuarios_canal>0){
 					cout<< "Agregueeee\n";
-					cout<< canal.num_usuarios_canal << "\n";
+					cout<< canales[id_actual].num_usuarios_canal << "\n";
 				}else{
 					cout<< "no hay nadie\n";
 				}
@@ -399,7 +400,7 @@ void change_nickname(int socket){
 	cout << "que hay en el buffer " << buffer << endl;
 	word = strtok(mensaje, " \r");
 	word = strtok(NULL, " \r");
-	if (sizeof(word)>0){//FALTA VERIFICAR SI YA SE ESTA USANDO EL NICK
+	if (sizeof(word)>0){
 		for (i=0; i<arraysize(usuarios); i++){
 			if (strcmp(word, usuarios[i].nombre.c_str())==0){
 				strcpy(textMessage, "SERVER: El nickname ");
@@ -506,6 +507,10 @@ int search_nickname(char *name){
 int search_channel(char *channel_name){
 	int indice;
 	for (indice=0; indice < arraysize(canales); indice++){
+		cout << "DENTRO DEL SEARCH CHANNEL" << endl;
+		cout << canales[indice].nombre_canal.c_str() << endl;
+		cout << channel_name << endl;
+		cout << strcmp(canales[indice].nombre_canal.c_str(), channel_name) << endl;
 		if (strcmp(canales[indice].nombre_canal.c_str(), channel_name)==0){
 			return indice;
 		}
@@ -522,4 +527,54 @@ int search_member(channel canal,char *member_name){
 		}
 	}
 	return -1;
+}
+
+void show_names(int socket){
+	int indice, nombIter, counter;
+	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
+	char* word;
+	char* nombresCanales;
+	char textMessage[512];
+	string msgString;
+	memset(textMessage, 0, bufsize);
+	strcpy(textMessage, "SERVER: Channels list:\n");
+	strcpy(mensaje, buffer);
+	counter = 0;
+	cout << "VIENDO ESTO " << endl;
+	word = strtok(mensaje, " \r");
+	word = strtok(NULL, " ,.-");
+	while (word != NULL){
+		cout << word << endl;
+		indice = search_channel(word);
+		
+		if(indice > 0){
+			for(nombIter=0; nombIter < canales[indice].num_usuarios_canal; nombIter++){
+				if(canales[indice].usuarios_canal[nombIter].nombre != ""){
+					strcat(textMessage, "Channel: ");
+					strcat(textMessage, word);
+					strcat(textMessage, ":@");
+					strcat(textMessage, canales[indice].usuarios_canal[nombIter].nombre.c_str());
+					strcat(textMessage, "\n");
+					counter++;
+				}
+			}
+		}
+		word = strtok(NULL, " ,.-");
+	}
+	if (counter == 0){
+		for(indice = 0; indice < arraysize(canales); indice++){
+			if(canales[indice].id_canal > 0){
+				for(nombIter=0; nombIter < 25; nombIter++){
+					if(canales[indice].usuarios_canal[nombIter].nombre != ""){
+						strcat(textMessage, "Channel:");
+						strcat(textMessage, canales[indice].nombre_canal.c_str());
+						strcat(textMessage, " :@");
+						strcat(textMessage, canales[indice].usuarios_canal[nombIter].nombre.c_str());
+						strcat(textMessage, "\n");
+					}
+				}
+			}
+		}
+	}
+	send(socket, textMessage, sizeof(textMessage),0);
 }
