@@ -290,13 +290,13 @@ void part_channel(int socket){
 		cout << "Obteniendo el canal\n";
 		channel canal_deseado = canales[pos-1];//Obtengo el canal que contiene al usuario
 		
-		delete &canal_deseado.usuarios_canal[indice];//seteo en 0
+		//delete &canal_deseado.usuarios_canal[indice];//seteo en 0
 		cout << "Eliminando al usuario del canal\n";
 		canal_deseado.num_usuarios_canal--;//Disminuyo la cantidad de usuarios
 		cout<< canal_deseado.num_usuarios_canal << "\n";
-		if(canal_deseado.num_usuarios_canal == 0){//Si ya no hay usuarios en el canal
+		/**if(canal_deseado.num_usuarios_canal == 0){//Si ya no hay usuarios en el canal
 			delete &canales[pos-1];//Elimino el puntero y el canal deja de existir
-		}
+		}*/
 		strcpy(textMessage, "SERVER: You has left the channel\n");
 		send(socket, textMessage, strlen(textMessage),0);
 	}
