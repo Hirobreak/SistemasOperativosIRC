@@ -619,6 +619,8 @@ int search_nickname(char *name){
 
 int search_channel(char *channel_name){
 	int indice;
+	char* j = (char*)calloc(strlen(buffer)+1, sizeof(char));
+	strcpy(j, buffer);
 	for (indice=0; indice < arraysize(canales); indice++){
 		cout << "DENTRO DEL SEARCH CHANNEL" << endl;
 		cout << canales[indice].nombre_canal.c_str() << endl;
@@ -634,7 +636,7 @@ int search_channel(char *channel_name){
 
 int search_member(channel canal,char *member_name){
 	int val;
-	for (val=0; val < sizeof(canal.usuarios_canal); val++){
+	for (val=0; val < arraysize(canal.usuarios_canal); val++){
 		if (strcmp(canal.usuarios_canal[val].nombre.c_str(), member_name)==0){
 			return val;
 		}
@@ -654,14 +656,14 @@ void show_names(int socket){
 	strcpy(mensaje, buffer);
 	counter = 0;
 	cout << "VIENDO ESTO " << endl;
-	word = strtok(mensaje, " \r");
-	word = strtok(NULL, " ,.-");
+	word = strtok(mensaje, " \r\n,.-");
+	word = strtok(NULL, " \r\n,.-");
 	while (word != NULL){
 		cout << word << endl;
 		indice = search_channel(word);
 		
 		if(indice > 0){
-			for(nombIter=0; nombIter < canales[indice].num_usuarios_canal; nombIter++){
+			for(nombIter=0; nombIter < 25; nombIter++){
 				if(canales[indice].usuarios_canal[nombIter].nombre != ""){
 					strcat(textMessage, "Channel: ");
 					strcat(textMessage, word);
@@ -672,7 +674,7 @@ void show_names(int socket){
 				}
 			}
 		}
-		word = strtok(NULL, " ,.-");
+		word = strtok(NULL, " \r\n,.-");
 	}
 	if (counter == 0){
 		for(indice = 0; indice < arraysize(canales); indice++){
@@ -689,5 +691,6 @@ void show_names(int socket){
 			}
 		}
 	}
+	cout << "VIENDO AQUELLO " << endl;
 	send(socket, textMessage, sizeof(textMessage),0);
 }
