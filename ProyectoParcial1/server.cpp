@@ -21,6 +21,8 @@ struct usuario {
   int whispering;
   int member;
   int status;
+  string realname;
+  string user;
 } ;
 
 struct channel{
@@ -61,6 +63,7 @@ void show_motd(int socket);
 void show_version(int socket);
 void end_session(int socket);
 void show_names(int socket);
+void set_user(int socket);
 template <typename T,unsigned S>
 inline unsigned arraysize(const T (&v)[S]) { return S; }
 int search_nickname(char *name);
@@ -131,7 +134,40 @@ void *connection_handler(void *socket_desc)
 
 	send(sock, "Connected...\n", strlen("Connected...\n"), 0);
 	send(sock, "For info about this server type /INFO\n", strlen("For info about this server type /INFO\n"), 0);
+	send(sock, "Please specify your user and real name with /USER [user] [realname]\n", strlen("Please specify your user and real name with /USER [user] [realname]\n"), 0);
 	usuarios[sock].status = 1;
+
+	while (usuarios[sock].user.empty() || usuarios[sock].realname.empty()){
+		pthread_mutex_lock(&empty);//SECCION CRITICA
+		pthread_mutex_lock(&buff);
+		memset(buffer, 0, bufsize);
+		length = recv(sock, buffer, bufsize, 0);
+		if(length < 1){
+			sender = -1;
+		}else{
+			sender = sock;
+			cout << "mensaje de " << sock << endl;
+		}
+
+		if(length >= 1){
+			//strcpy(mensaje, buffer);
+			if (usuarios[sock].nombre.empty()){
+				cout << "Anonimo " << sock << ": ";
+			}else{
+				cout << usuarios[sock].nombre << ": ";
+			}
+			cout << buffer << "";
+			if (*buffer == '#'){
+				*buffer = '*';
+				isExit = true;
+			}else{
+				//memset(buffer, 0, bufsize);
+			}
+		}
+		pthread_mutex_unlock(&buff);
+		pthread_mutex_unlock(&full);
+		
+	}
 
 	while (usuarios[sock].status == 1){
 		pthread_mutex_lock(&empty);//SECCION CRITICA
@@ -175,6 +211,10 @@ void *connection_handler(void *socket_desc)
 	}
 
 	send(sock, "Disconnected... :(\n", strlen("Disconnected... :(\n"), 0);
+	usuarios[sock].nombre.clear();
+	usuarios[sock].user.clear();
+	usuarios[sock].realname.clear();
+	usuarios[sock].status = -1;
 	close(sock);
     return 0;
 } 
@@ -192,6 +232,18 @@ void parse_command(char *textInput, int socket){
 		return;
 	textContent = strtok(textBuffer, "\r\n");
 	strcpy(textParsing, textContent);
+
+	if(usuarios[socket].user.empty() || usuarios[socket].realname.empty()){
+		cout << "Ya sabe como es uno 2" << endl;
+		if (strcmp(strtok(textContent, " "),"/USER")==0){
+			cout << "Ya sabe como es uno 3" << endl;
+			set_user(socket);
+		}else{
+			send(socket, "Please set your user and real name\n", strlen("Please set your user and real name\n"), 0);
+			return;
+		}
+	}
+
 	if (strcmp(textParsing,"/INFO")==0){
 		show_info(socket);
 	}else if(strcmp(strtok(textContent, " "), "/NICK") == 0){
@@ -420,6 +472,63 @@ void change_nickname(int socket){
 	free(mensaje);
 }
 
+void set_user(int socket){
+	char* mensaje = (char*)calloc(strlen(buffer)+1, sizeof(char));
+	char* word;
+	strcpy(mensaje, buffer);
+	char textMessage[512];
+	int i;
+	int taken = 0;
+	memset(textMessage, 0, bufsize);
+	
+	cout << "que hay en el buffer " << buffer << endl;
+	word = strtok(mensaje, " \r");
+	if(word != NULL){
+		word = strtok(NULL, " \r");
+	}else{
+		send(socket, "Please set your user and real name\n", strlen("Please set your user and real name\n"), 0);
+		return;
+	}
+	if(word == NULL){
+		return;
+	}
+	if (sizeof(word)>0){
+		for (i=0; i<arraysize(usuarios); i++){
+			if (strcmp(word, usuarios[i].user.c_str())==0 && i!=socket){
+				strcpy(textMessage, "SERVER: El Usuario ");
+				strcat(textMessage, word);
+				strcat(textMessage, " ya existe.\n");
+				send(socket, textMessage, sizeof(textMessage),0);
+				taken=1;
+			}
+		}
+		if(!taken){
+			cout << usuarios[socket].user << " Changing User To " << word << endl;
+			usuarios[socket].user = string(word);
+		}
+	}else{
+		cout << "Name not changed \n" << endl;
+	}
+	if(word != NULL){
+		word = strtok(NULL, " \r");
+	}else{
+		send(socket, "Please set your user and real name\n", strlen("Please set your user and real name\n"), 0);
+		return;
+	}
+	if(word == NULL){
+		send(socket, "Please set your user and real name\n", strlen("Please set your user and real name\n"), 0);
+		return;
+	}
+	if (sizeof(word)>0 && strcmp(word, "")!=0 && strcmp(word, " ")!=0 && strcmp(word, "\n")!=0){
+		cout << usuarios[socket].realname << " Changing RealName To " << word << endl;
+		usuarios[socket].realname = string(word);
+	}else{
+		send(socket, "Please set your user and real name\n", strlen("Please set your user and real name\n"), 0);
+		cout << "Name not changed \n" << endl;
+	}
+	free(mensaje);
+}
+
 void *server_handler(void *server_desc){
 
  	while(true){
@@ -430,19 +539,23 @@ void *server_handler(void *server_desc){
 			if(*buffer == '/'){
 				parse_command(buffer, sender);
 			}else{
-				for( int i = 0; i < 25; i++){
-					memset(mensaje_server, 0, msize);
-					if(usuarios[sender].nombre.empty()){
-						strcat(mensaje_server, "Anonimo");
-					}else{
-						strcat(mensaje_server, usuarios[sender].nombre.c_str());
-					}
-					strcat(mensaje_server, ": ");
-					strcat(mensaje_server, buffer);
+				if(usuarios[sender].user.empty() || usuarios[sender].realname.empty()){
+					send(sender, "Please set your user and real name\n", strlen("Please set your user and real name\n"), 0);
+				}else{
+					for( int i = 0; i < 25; i++){
+						memset(mensaje_server, 0, msize);
+						if(usuarios[sender].nombre.empty()){
+							strcat(mensaje_server, "Anonimo");
+						}else{
+							strcat(mensaje_server, usuarios[sender].nombre.c_str());
+						}
+						strcat(mensaje_server, ": ");
+						strcat(mensaje_server, buffer);
 
-					if(i != sender && usuarios[i].status == 1 && usuarios[i].member==usuarios[sender].member){
-					//strcpy(mensaje_server, "Habla Flaco!!! ");
-						send(i, mensaje_server, msize, 0);
+						if(i != sender && usuarios[i].status == 1 && usuarios[i].member==usuarios[sender].member){
+						//strcpy(mensaje_server, "Habla Flaco!!! ");
+							send(i, mensaje_server, msize, 0);
+						}
 					}
 				}
 			}
