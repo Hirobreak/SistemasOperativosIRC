@@ -1,10 +1,10 @@
 CC=g++
 CFLAGS=-c
 
-all: server
+all: espolirc
 
-server: server.o
-	$(CC) server.o -lpthread -o server
+espolirc: server.o
+	$(CC) server.o -lpthread -o espolirc
 
 server.o: server.cpp
 	$(CC) $(CFLAGS) server.cpp
